@@ -3,7 +3,7 @@ const main = (config) => {
   // 每一项把一个远程规则列表绑定到一个可手动选择节点的策略组。
   // id 是规则集标识，尽量保持不变；file 是仓库 rules 目录下的文件路径。
   const routes = [
-    { name: 'X / Grok / Cursor', id: 'my-routing', file: 'My-routing-X/Grok/Cursor.list' },
+    { name: 'X / Grok / Cursor', id: 'my-routing', file: 'X&Grok&Cursor.list' },
     { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list' }
   ];
   const base = 'https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/';

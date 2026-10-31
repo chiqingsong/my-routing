@@ -20,7 +20,7 @@ https://raw.githubusercontent.com/chiqingsong/my-routing/main/flclash/My-Routing
 
 远程规则 URL：
 
-https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/My-routing-X/Grok/Cursor.list
+https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/X&Grok&Cursor.list
 
 在远程规则中添加该 URL，并绑定现有的代理策略组。规则应放在其他可能覆盖这些服务的规则前面。
 
@@ -28,7 +28,7 @@ https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/My-routing-X
 
 ## 维护
 
-日常只编辑 rules/My-routing-X/Grok/Cursor.list。共 41 条初始规则，无节点、密钥或机场订阅。Grok Bot 和 Cursor 共用服务的部分一起分流，尚未逐项验证所有功能的网络请求。
+日常只编辑 rules/X&Grok&Cursor.list。共 41 条初始规则，无节点、密钥或机场订阅。Grok Bot 和 Cursor 共用服务的部分一起分流，尚未逐项验证所有功能的网络请求。
 
 规则源为手动整理的快照，不会自动同步上游。来源：
 
@@ -48,4 +48,4 @@ https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/My-routing-X
 
 Siri 订阅：https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/Siri.list
 
-Loon 将这份远程规则绑定到自己的 Siri 策略组。两份清单仍为手动维护快照。旧 rules/My-Routing.list 保留为兼容副本，避免尚未更新 JS 的设备断开；日常维护使用新路径。
+Loon 将这份远程规则绑定到自己的 Siri 策略组。两份清单仍为手动维护快照。旧路径已删除，请更新脚本及 Loon 远程规则地址，使用 rules/X&Grok&Cursor.list。

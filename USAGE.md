@@ -12,18 +12,18 @@ https://raw.githubusercontent.com/chiqingsong/my-routing/main/flclash/My-Routing
 
 在远程规则中添加以下 URL，并选择你已有的代理策略组：
 
-https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/My-routing-X/Grok/Cursor.list
+https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/X&Grok&Cursor.list
 
 将它放到其他可能匹配这些服务的规则之前。远程规则条目示例（将 ExistingProxy 替换为现有策略组名称）：
 
 ```ini
 [Remote Rule]
-https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/My-routing-X/Grok/Cursor.list, policy=ExistingProxy, tag=My Routing, enabled=true
+https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/X&Grok&Cursor.list, policy=ExistingProxy, tag=My Routing, enabled=true
 ```
 
 ## 日常维护
 
-只修改 rules/My-routing-X/Grok/Cursor.list 即可更新服务域名和 IP。初始包含 41 条去重规则，不包含节点、密钥或机场订阅。Grok Bot 与 Cursor 共用服务的部分统一分流；尚未逐项验证所有功能的请求。
+只修改 rules/X&Grok&Cursor.list 即可更新服务域名和 IP。初始包含 41 条去重规则，不包含节点、密钥或机场订阅。Grok Bot 与 Cursor 共用服务的部分统一分流；尚未逐项验证所有功能的请求。
 
 本仓库规则为手动维护快照，不会自动同步上游。上游来源及许可见：
 
@@ -41,4 +41,4 @@ https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/My-routing-X
 
 Siri 订阅：https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/Siri.list
 
-Loon 将这份远程规则绑定到自己的 Siri 策略组。两份清单仍为手动维护快照。旧 rules/My-Routing.list 保留为兼容副本，避免尚未更新 JS 的设备断开；日常维护使用新路径。
+Loon 将这份远程规则绑定到自己的 Siri 策略组。两份清单仍为手动维护快照。旧路径已删除，请更新脚本及 Loon 远程规则地址，使用 rules/X&Grok&Cursor.list。
