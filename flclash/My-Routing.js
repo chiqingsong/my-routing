@@ -1,7 +1,7 @@
-// FlClash calls main with the original subscription configuration.
+// FlClash 会把原始订阅配置传入 main，脚本修改后再返回。
 const main = (config) => {
-  // Each entry connects one remote rule list to one selectable proxy group.
-  // Keep provider IDs stable so existing cached rule lists can still be used.
+  // 每一项把一个远程规则列表绑定到一个可手动选择节点的策略组。
+  // id 是规则集标识，尽量保持不变；file 是仓库 rules 目录下的文件路径。
   const routes = [
     { name: 'X / Grok / Cursor', id: 'my-routing', file: 'My-routing-X/Grok/Cursor.list' },
     { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list' }
@@ -9,22 +9,20 @@ const main = (config) => {
   const base = 'https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/';
   const names = routes.map(route => route.name);
 
-  // Preserve the subscription groups, replacing only our managed groups.
+  // 保留机场原有策略组，只替换本脚本管理的同名组，避免重复添加。
   const groups = (config['proxy-groups'] || []).filter(group => !names.includes(group.name));
-  const fallback = groups.find(group => group.name.includes('海外AI')) || groups[0];
 
-  // The first choice is the default; each group can select a different node.
+  // 两个组独立选择节点，不跟随机场策略组。没有已保存的选择时默认使用首个节点。
   const choices = [...new Set([
-    ...(fallback ? [fallback.name] : []),
     ...(config.proxies || []).map(proxy => proxy.name),
-    'DIRECT'
+    'DIRECT' // 直连选项；如果订阅没有提供节点，则只剩此选项。
   ])];
   config['proxy-groups'] = [
     ...routes.map(route => ({ name: route.name, type: 'select', proxies: [...choices] })),
     ...groups
   ];
 
-  // Preserve other providers and refresh our text rule lists every 24 hours.
+  // 保留其他规则集，并设置我们自己的远程列表，每 86400 秒（24 小时）更新一次。
   const providers = { ...(config['rule-providers'] || {}) };
   for (const route of routes) {
     providers[route.id] = {
@@ -36,8 +34,8 @@ const main = (config) => {
   }
   config['rule-providers'] = providers;
 
-  // Put our rules before subscription rules. First match wins.
-  // Remove older bindings for our provider IDs to avoid duplicate rules.
+  // 把我们的规则放在机场规则之前；流量命中第一条匹配规则后就使用对应策略组。
+  // 先删除这两个规则集的旧绑定，确保反复运行脚本也不会产生重复规则。
   const ids = new Set(routes.map(route => route.id));
   const originalRules = (config.rules || []).filter(rule => {
     const parts = rule.split(',').map(part => part.trim());

@@ -12,7 +12,7 @@
 
 https://raw.githubusercontent.com/chiqingsong/my-routing/main/flclash/My-Routing.js
 
-在订阅的扩展设置中选择脚本模式，绑定并应用。脚本创建 X / Grok / Cursor 组，优先使用名称含“海外AI”的现有组，否则使用第一个现有组；也可手动选择节点。若没有现有组和节点，会回退到 DIRECT，使用前请确认出口。
+在订阅的扩展设置中选择脚本模式，绑定并应用。脚本创建 X / Grok / Cursor 和 Siri 两个独立组，直接选择订阅节点，不跟随机场策略组。没有已保存的选择时默认使用首个节点；没有节点时仅有 DIRECT（直连）。
 
 规则集每 86400 秒更新一次，也可手动更新。规则内容更新无需重新导入脚本；脚本自身的配置变化需要更新脚本。
 
@@ -41,7 +41,7 @@ https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/My-routing-X
 
 ## Siri
 
-新增独立的 Siri 策略组，使用 rules/Siri.list。FlClash 更新并应用 JS 后可选择出口；默认跟随海外AI（没有时使用首个已有组）。清单合并以下两份上游，标准化空格并去除完全重复规则；保留不同匹配类型。包含定位、Apple Relay、资源域名和 siri 关键词，覆盖范围不限于 Siri。此配置只控制网络出口，不改变账号、设备或地区资格。
+新增独立的 Siri 策略组，使用 rules/Siri.list。FlClash 更新并应用 JS 后可选择出口；直接选择节点，不跟随机场策略组。清单合并以下两份上游，标准化空格并去除完全重复规则；保留不同匹配类型。包含定位、Apple Relay、资源域名和 siri 关键词，覆盖范围不限于 Siri。此配置只控制网络出口，不改变账号、设备或地区资格。
 
 - https://raw.githubusercontent.com/ddgksf2013/Filter/refs/heads/master/AppleIntelligence.list
 - https://raw.githubusercontent.com/RocM301/Apple-Rule/refs/heads/main/Apple-AI.list
