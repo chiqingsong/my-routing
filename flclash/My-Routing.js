@@ -99,5 +99,32 @@ const main = (config) => {
     ...routes.map(route => 'RULE-SET,' + route.id + ',' + route.name),
     ...originalRules
   ];
+  // Keep the subscription's listener and Fake-IP compatibility filters.
+  // Resolve proxy endpoints directly to avoid a DNS/proxy dependency loop.
+  config.dns = {
+    ...(config.dns || {}),
+    enable: true, ipv6: false, 'prefer-h3': false,
+    'use-hosts': true, 'use-system-hosts': true, 'respect-rules': false,
+    'enhanced-mode': 'fake-ip', 'fake-ip-range': '198.18.0.1/16',
+    'default-nameserver': ['223.5.5.5', '119.29.29.29'],
+    'proxy-server-nameserver': [
+      'https://dns.alidns.com/dns-query#DIRECT',
+      'https://doh.pub/dns-query#DIRECT'
+    ],
+    'proxy-server-nameserver-policy': {},
+    nameserver: [
+      'https://1.1.1.1/dns-query#🇸🇬 新加坡节点',
+      'https://8.8.8.8/dns-query#🇸🇬 新加坡节点'
+    ],
+    'nameserver-policy': {
+      'geosite:cn': [
+        'https://dns.alidns.com/dns-query#DIRECT',
+        'https://doh.pub/dns-query#DIRECT'
+      ]
+    },
+    // Clear inherited resolver paths that could bypass this policy.
+    fallback: [], 'fallback-filter': {},
+    'direct-nameserver': [], 'direct-nameserver-follow-policy': false
+  };
   return config;
 };
