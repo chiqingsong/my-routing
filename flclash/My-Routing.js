@@ -17,9 +17,39 @@ const main = (config) => {
     ...(config.proxies || []).map(proxy => proxy.name),
     'DIRECT' // 直连选项；如果订阅没有提供节点，则只剩此选项。
   ])];
-  config['proxy-groups'] = [
+  // Region groups contain matching nodes only; each group is manually selectable.
+  const regions = [
+    ['香港', /香港|Hong[ -]?Kong|\bHK\b|🇭🇰/i],
+    ['台湾', /台湾|台灣|Taiwan|\bTW\b|🇹🇼/i],
+    ['日本', /日本|Japan|\bJP\b|🇯🇵/i],
+    ['韩国', /韩国|韓國|Korea|\bKR\b|🇰🇷/i],
+    ['新加坡', /新加坡|Singapore|\bSG\b|🇸🇬/i],
+    ['美国', /美国|美國|United States|USA|\bUS\b|🇺🇸/i],
+    ['马来西亚', /马来西亚|馬來西亞|Malaysia|\bMY\b|🇲🇾/i],
+    ['德国', /德国|德國|Germany|\bDE\b|🇩🇪/i],
+    ['荷兰', /荷兰|荷蘭|Netherlands|\bNL\b|🇳🇱/i],
+    ['英国', /英国|英國|United Kingdom|Britain|\b(?:UK|GB)\b|🇬🇧/i]
+  ];
+  const regionNames = regions.map(([name]) => name + '节点');
+  const regionGroups = regions.map(([name, pattern]) => {
+    const matches = (config.proxies || []).map(proxy => proxy.name)
+      .filter(node => pattern.test(node));
+    // Fail closed when a subscription has no nodes for a region.
+    return { name: name + '节点', type: 'select', proxies: [...new Set(matches.length ? matches : ['REJECT'])] };
+  });
+  const businessGroups = [
     ...routes.map(route => ({ name: route.name, type: 'select', proxies: [...choices] })),
-    ...groups
+    ...groups.filter(group => !regionNames.includes(group.name))
+  ];
+  config['proxy-groups'] = [
+    ...businessGroups.map(group => {
+      // Keep fixed DIRECT/REJECT wrappers and automatic test groups unchanged.
+      const previous = (group.proxies || []).filter(name => !regionNames.includes(name));
+      const fixed = previous.length === 1 && ['DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'].includes(previous[0]);
+      if (group.type !== 'select' || fixed) return group;
+      return { ...group, proxies: [...new Set([...previous, ...regionNames])] };
+    }),
+    ...regionGroups
   ];
 
   // 保留其他规则集，并设置我们自己的远程列表，每 86400 秒（24 小时）更新一次。
