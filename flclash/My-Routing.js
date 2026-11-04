@@ -19,18 +19,20 @@ const main = (config) => {
   ])];
   // Region groups contain matching nodes only; each group is manually selectable.
   const regions = [
-    ['香港', /香港|Hong[ -]?Kong|\bHK\b|🇭🇰/i],
-    ['台湾', /台湾|台灣|Taiwan|\bTW\b|🇹🇼/i],
-    ['日本', /日本|Japan|\bJP\b|🇯🇵/i],
-    ['韩国', /韩国|韓國|Korea|\bKR\b|🇰🇷/i],
-    ['新加坡', /新加坡|Singapore|\bSG\b|🇸🇬/i],
-    ['美国', /美国|美國|United States|USA|\bUS\b|🇺🇸/i],
-    ['马来西亚', /马来西亚|馬來西亞|Malaysia|\bMY\b|🇲🇾/i],
-    ['德国', /德国|德國|Germany|\bDE\b|🇩🇪/i],
-    ['荷兰', /荷兰|荷蘭|Netherlands|\bNL\b|🇳🇱/i],
-    ['英国', /英国|英國|United Kingdom|Britain|\b(?:UK|GB)\b|🇬🇧/i]
+    ['🇭🇰 香港', /香港|Hong[ -]?Kong|\bHK\b|🇭🇰/i],
+    ['🇹🇼 台湾', /台湾|台灣|Taiwan|\bTW\b|🇹🇼/i],
+    ['🇯🇵 日本', /日本|Japan|\bJP\b|🇯🇵/i],
+    ['🇰🇷 韩国', /韩国|韓國|Korea|\bKR\b|🇰🇷/i],
+    ['🇸🇬 新加坡', /新加坡|Singapore|\bSG\b|🇸🇬/i],
+    ['🇺🇸 美国', /美国|美國|United States|USA|\bUS\b|🇺🇸/i],
+    ['🇲🇾 马来西亚', /马来西亚|馬來西亞|Malaysia|\bMY\b|🇲🇾/i],
+    ['🇩🇪 德国', /德国|德國|Germany|\bDE\b|🇩🇪/i],
+    ['🇳🇱 荷兰', /荷兰|荷蘭|Netherlands|\bNL\b|🇳🇱/i],
+    ['🇬🇧 英国', /英国|英國|United Kingdom|Britain|\b(?:UK|GB)\b|🇬🇧/i]
   ];
   const regionNames = regions.map(([name]) => name + '节点');
+  const legacyRegionNames = regionNames.map(name => name.slice(name.indexOf(' ') + 1));
+  const managedRegionNames = [...regionNames, ...legacyRegionNames];
   const regionGroups = regions.map(([name, pattern]) => {
     const matches = (config.proxies || []).map(proxy => proxy.name)
       .filter(node => pattern.test(node));
@@ -39,12 +41,16 @@ const main = (config) => {
   });
   const businessGroups = [
     ...routes.map(route => ({ name: route.name, type: 'select', proxies: [...choices] })),
-    ...groups.filter(group => !regionNames.includes(group.name))
+    ...groups.filter(group => !managedRegionNames.includes(group.name))
   ];
   config['proxy-groups'] = [
     ...businessGroups.map(group => {
+      // Hide media selectors without removing their rules or changing their targets.
+      if (['🌍 国外媒体', '🎬 Netflix', '🎬 DisneyPlus'].includes(group.name)) {
+        group = { ...group, hidden: true };
+      }
       // Keep fixed DIRECT/REJECT wrappers and automatic test groups unchanged.
-      const previous = (group.proxies || []).filter(name => !regionNames.includes(name));
+      const previous = (group.proxies || []).filter(name => !managedRegionNames.includes(name));
       const fixed = previous.length === 1 && ['DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'].includes(previous[0]);
       if (group.type !== 'select' || fixed) return group;
       return { ...group, proxies: [...new Set([...previous, ...regionNames])] };
