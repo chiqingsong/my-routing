@@ -19,7 +19,7 @@
 | [Siri.list](rules/Siri.list) | [ddgksf2013](https://github.com/ddgksf2013/Filter/blob/master/AppleIntelligence.list)、[RocM301](https://github.com/RocM301/Apple-Rule/blob/main/Apple-AI.list) | 合并去重后手动维护 |
 | [TelegramSG.list](rules/TelegramSG.list)、[TelegramUS.list](rules/TelegramUS.list)、[TelegramEU.list](rules/TelegramEU.list) | [RzMY 区域映射与生成器](https://github.com/RzMY/Telegram-CIDR-Regions)、[RIPEstat 数据接口](https://stat.ripe.net/docs/data-api/api-endpoints/announced-prefixes) | 每日自动生成 |
 
-Siri 清单也包含 Apple Relay 等服务，覆盖范围不限于 Siri。Telegram 三份列表已生成，尚未绑定到 FlClash 脚本中的策略组。
+Siri 清单也包含 Apple Relay 等服务，覆盖范围不限于 Siri。Telegram SG、US、EU 已接入脚本，默认分别选择新加坡、美国、德国地区组，可手动更换出口；三份规则均优先于机场规则。
 
 ## 维护
 

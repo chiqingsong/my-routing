@@ -4,7 +4,10 @@ const main = (config) => {
   // id 是规则集标识，尽量保持不变；file 是仓库 rules 目录下的文件路径。
   const routes = [
     { name: 'X / Grok / Cursor', id: 'my-routing', file: 'X&Grok&Cursor.list' },
-    { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list' }
+    { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list' },
+    { name: 'Telegram SG', id: 'telegram-sg', file: 'TelegramSG.list', preferred: '🇸🇬 新加坡节点' },
+    { name: 'Telegram US', id: 'telegram-us', file: 'TelegramUS.list', preferred: '🇺🇸 美国节点' },
+    { name: 'Telegram EU', id: 'telegram-eu', file: 'TelegramEU.list', preferred: '🇩🇪 德国节点' }
   ];
   const base = 'https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/';
   const names = routes.map(route => route.name);
@@ -65,7 +68,9 @@ const main = (config) => {
       const previous = (group.proxies || []).filter(name => !managedRegionNames.includes(name));
       const fixed = previous.length === 1 && ['DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'].includes(previous[0]);
       if (group.type !== 'select' || fixed) return group;
-      return { ...group, proxies: [...new Set([...previous, ...regionNames])] };
+      // Put the default region first without preventing manual overrides.
+      const preferred = routes.find(route => route.name === group.name)?.preferred;
+      return { ...group, proxies: [...new Set([...(preferred ? [preferred] : []), ...previous, ...regionNames])] };
     }),
     ...regionGroups,
     ...autoGroups
@@ -84,7 +89,7 @@ const main = (config) => {
   config['rule-providers'] = providers;
 
   // 把我们的规则放在机场规则之前；流量命中第一条匹配规则后就使用对应策略组。
-  // 先删除这两个规则集的旧绑定，确保反复运行脚本也不会产生重复规则。
+  // Remove managed bindings before prepending them to keep repeated runs idempotent.
   const ids = new Set(routes.map(route => route.id));
   const originalRules = (config.rules || []).filter(rule => {
     const parts = rule.split(',').map(part => part.trim());
