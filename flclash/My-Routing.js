@@ -32,12 +32,24 @@ const main = (config) => {
   ];
   const regionNames = regions.map(([name]) => name + '节点');
   const legacyRegionNames = regionNames.map(name => name.slice(name.indexOf(' ') + 1));
-  const managedRegionNames = [...regionNames, ...legacyRegionNames];
+  const autoNames = regions.map(([name]) => name + '自动');
+  const managedRegionNames = [...regionNames, ...legacyRegionNames, ...autoNames];
+  const autoGroups = [];
   const regionGroups = regions.map(([name, pattern]) => {
     const matches = (config.proxies || []).map(proxy => proxy.name)
       .filter(node => pattern.test(node));
-    // Fail closed when a subscription has no nodes for a region.
-    return { name: name + '节点', type: 'select', proxies: [...new Set(matches.length ? matches : ['REJECT'])] };
+    const nodes = [...new Set(matches)];
+    // Do not probe REJECT or silently fall back to another region.
+    if (!nodes.length) return { name: name + '节点', type: 'select', proxies: ['REJECT'] };
+    const automatic = name + '自动';
+    autoGroups.push({
+      name: automatic, type: 'url-test', proxies: nodes,
+      url: 'https://www.gstatic.com/generate_204',
+      interval: 300, timeout: 5000, tolerance: 50,
+      lazy: true, 'expected-status': 204, hidden: true
+    });
+    // Existing saved manual selections remain valid; fresh groups start with automatic selection.
+    return { name: name + '节点', type: 'select', proxies: [automatic, ...nodes] };
   });
   const businessGroups = [
     ...routes.map(route => ({ name: route.name, type: 'select', proxies: [...choices] })),
@@ -55,7 +67,8 @@ const main = (config) => {
       if (group.type !== 'select' || fixed) return group;
       return { ...group, proxies: [...new Set([...previous, ...regionNames])] };
     }),
-    ...regionGroups
+    ...regionGroups,
+    ...autoGroups
   ];
 
   // 保留其他规则集，并设置我们自己的远程列表，每 86400 秒（24 小时）更新一次。
