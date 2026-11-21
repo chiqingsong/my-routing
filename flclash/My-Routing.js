@@ -99,6 +99,45 @@ const main = (config) => {
     ...routes.map(route => 'RULE-SET,' + route.id + ',' + route.name),
     ...originalRules
   ];
+  // Reuse an automatic selector only when every candidate is a concrete proxy.
+  // Never resolve proxy endpoints through this group: that would create a dependency loop.
+  const dnsNodes = (config.proxies || [])
+    .filter(proxy => !['direct', 'reject', 'dns', 'pass'].includes(proxy.type))
+    .map(proxy => proxy.name);
+  const dnsNodeSet = new Set(dnsNodes);
+  let dnsGroup = config['proxy-groups'].find(group =>
+    /自动选择|auto[ -]?select/i.test(group.name) && group.type === 'url-test' &&
+    !group['include-all'] && !group['include-all-proxies'] &&
+    !group['include-all-providers'] && !(group.use || []).length &&
+    (group.proxies || []).length > 0 &&
+    group.proxies.every(name => dnsNodeSet.has(name))
+  );
+  // Reuse a previously generated provider-only or empty selector on repeated runs.
+  dnsGroup = dnsGroup || config['proxy-groups'].find(group =>
+    /^🌐 DNS 自动选择(?: \d+)?$/.test(group.name) && (
+      (group.type === 'url-test' && group['exclude-type'] === 'direct|reject' &&
+        (group.use || []).length > 0 &&
+        group.use.every(name => Object.prototype.hasOwnProperty.call(config['proxy-providers'] || {}, name)) &&
+        (group.proxies || []).every(name => dnsNodeSet.has(name))) ||
+      (!dnsNodes.length && !Object.keys(config['proxy-providers'] || {}).length &&
+        group.type === 'select' && JSON.stringify(group.proxies) === '["REJECT"]')
+    )
+  );
+  if (!dnsGroup) {
+    // Provider-only subscriptions can also supply nodes to the dedicated selector.
+    const providerNames = Object.keys(config['proxy-providers'] || {});
+    let name = '🌐 DNS 自动选择';
+    const occupied = new Set([...config['proxy-groups'].map(group => group.name), ...dnsNodes]);
+    for (let suffix = 2; occupied.has(name); suffix++) name = '🌐 DNS 自动选择 ' + suffix;
+    dnsGroup = dnsNodes.length || providerNames.length ? {
+      name, type: 'url-test', proxies: [...new Set(dnsNodes)],
+      ...(providerNames.length ? { use: providerNames, 'exclude-type': 'direct|reject' } : {}),
+      url: 'https://www.gstatic.com/generate_204',
+      interval: 300, timeout: 5000, tolerance: 50, lazy: true,
+      'expected-status': 204
+    } : { name, type: 'select', proxies: ['REJECT'] };
+    config['proxy-groups'].push(dnsGroup);
+  }
   // Keep the subscription's listener and Fake-IP compatibility filters.
   // Resolve proxy endpoints directly to avoid a DNS/proxy dependency loop.
   config.dns = {
@@ -113,8 +152,8 @@ const main = (config) => {
     ],
     'proxy-server-nameserver-policy': {},
     nameserver: [
-      'https://1.1.1.1/dns-query#🇸🇬 新加坡节点',
-      'https://8.8.8.8/dns-query#🇸🇬 新加坡节点'
+      'https://1.1.1.1/dns-query#' + dnsGroup.name,
+      'https://8.8.8.8/dns-query#' + dnsGroup.name
     ],
     'nameserver-policy': {
       'geosite:cn': [
