@@ -2,11 +2,13 @@
 const main = (config) => {
   // 每一项把一个远程规则列表绑定到一个可手动选择节点的策略组。
   // id 是规则集标识，尽量保持不变；file 是仓库 rules 目录下的文件路径。
+  const usRegion = '🇺🇸 美国';
+  const usSelector = usRegion + '节点';
   const routes = [
-    { name: 'X / Grok / Cursor', id: 'my-routing', file: 'X&Grok&Cursor.list' },
-    { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list' },
+    { name: 'X / Grok / Cursor', id: 'my-routing', file: 'X&Grok&Cursor.list', preferred: usSelector },
+    { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list', preferred: usSelector },
     { name: 'Telegram SG', id: 'telegram-sg', file: 'TelegramSG.list', preferred: '🇸🇬 新加坡节点' },
-    { name: 'Telegram US', id: 'telegram-us', file: 'TelegramUS.list', preferred: '🇺🇸 美国节点' },
+    { name: 'Telegram US', id: 'telegram-us', file: 'TelegramUS.list', preferred: usSelector },
     { name: 'Telegram EU', id: 'telegram-eu', file: 'TelegramEU.list', preferred: '🇩🇪 德国节点' }
   ];
   const base = 'https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/';
@@ -15,7 +17,7 @@ const main = (config) => {
   // 保留机场原有策略组，只替换本脚本管理的同名组，避免重复添加。
   const groups = (config['proxy-groups'] || []).filter(group => !names.includes(group.name));
 
-  // 两个组独立选择节点，不跟随机场策略组。没有已保存的选择时默认使用首个节点。
+  // Custom service selectors can pick a region, a node, or DIRECT.
   const choices = [...new Set([
     ...(config.proxies || []).map(proxy => proxy.name),
     'DIRECT' // 直连选项；如果订阅没有提供节点，则只剩此选项。
@@ -27,36 +29,79 @@ const main = (config) => {
     ['🇯🇵 日本', /日本|Japan|\bJP\b|🇯🇵/i],
     ['🇰🇷 韩国', /韩国|韓國|Korea|\bKR\b|🇰🇷/i],
     ['🇸🇬 新加坡', /新加坡|Singapore|\bSG\b|🇸🇬/i],
-    ['🇺🇸 美国', /美国|美國|United States|USA|\bUS\b|🇺🇸/i],
+    [usRegion, /美国|美國|United States|USA|\bUS\b|🇺🇸/i],
     ['🇲🇾 马来西亚', /马来西亚|馬來西亞|Malaysia|\bMY\b|🇲🇾/i],
     ['🇩🇪 德国', /德国|德國|Germany|\bDE\b|🇩🇪/i],
     ['🇳🇱 荷兰', /荷兰|荷蘭|Netherlands|\bNL\b|🇳🇱/i],
     ['🇬🇧 英国', /英国|英國|United Kingdom|Britain|\b(?:UK|GB)\b|🇬🇧/i]
   ];
   const regionNames = regions.map(([name]) => name + '节点');
+  const displayOrder = [usRegion, '🇯🇵 日本', '🇸🇬 新加坡', '🇹🇼 台湾', '🇭🇰 香港'];
+  const displayRegions = [
+    ...displayOrder.map(name => regions.find(region => region[0] === name)),
+    ...regions.filter(([name]) => !displayOrder.includes(name))
+  ];
+  const displayRegionNames = displayRegions.map(([name]) => name + '节点');
+  const nodeRanks = new Map();
+  for (const proxy of config.proxies || []) {
+    const rank = displayRegions.findIndex(([, pattern]) => pattern.test(proxy.name));
+    if (rank !== -1) nodeRanks.set(proxy.name, rank);
+  }
+
+  const usStandardAuto = usRegion + '普通测速';
+  const usMultiplierAuto = usRegion + '倍率测速';
   const legacyRegionNames = regionNames.map(name => name.slice(name.indexOf(' ') + 1));
   const autoNames = regions.map(([name]) => name + '自动');
-  const managedRegionNames = [...regionNames, ...legacyRegionNames, ...autoNames];
+  const managedRegionNames = new Set([
+    ...regionNames, ...legacyRegionNames, ...autoNames, usStandardAuto, usMultiplierAuto
+  ]);
+  const healthCheck = {
+    url: 'https://www.gstatic.com/generate_204',
+    interval: 300, timeout: 5000, lazy: true, 'expected-status': 204, hidden: true
+  };
   const autoGroups = [];
   const regionGroups = regions.map(([name, pattern]) => {
     const matches = (config.proxies || []).map(proxy => proxy.name)
       .filter(node => pattern.test(node));
     const nodes = [...new Set(matches)];
-    // Do not probe REJECT or silently fall back to another region.
-    if (!nodes.length) return { name: name + '节点', type: 'select', proxies: ['REJECT'] };
+    const selector = name + '节点';
+    // Keep empty regions selectable without routing their traffic elsewhere.
+    if (!nodes.length) return { name: selector, type: 'select', proxies: ['REJECT'] };
+
     const automatic = name + '自动';
-    autoGroups.push({
-      name: automatic, type: 'url-test', proxies: nodes,
-      url: 'https://www.gstatic.com/generate_204',
-      interval: 300, timeout: 5000, tolerance: 50,
-      lazy: true, 'expected-status': 204, hidden: true
-    });
-    // Existing saved manual selections remain valid; fresh groups start with automatic selection.
-    return { name: name + '节点', type: 'select', proxies: [automatic, ...nodes] };
+    if (name === usRegion) {
+      const standard = [];
+      const multiplier = [];
+      let primary;
+      for (const node of nodes) {
+        const label = node.normalize('NFKC').trim();
+        // Only a trailing numeric bracket is a multiplier. Classify it before checking D1–D4.
+        if (/\[\s*(?:[x×]\s*)?\d+(?:\.\d+)?\s*(?:[x×倍])?\s*\]$/i.test(label)) {
+          multiplier.push(node);
+        } else {
+          const slot = label.match(/(?:^|[^A-Za-z0-9])D([1-4])$/i)?.[1];
+          if (slot === '3') primary ??= node;
+          else if (slot) standard.push(node);
+        }
+      }
+
+      const tiers = primary ? [primary] : [];
+      for (const [tier, candidates] of [[usStandardAuto, standard], [usMultiplierAuto, multiplier]]) {
+        if (!candidates.length) continue;
+        autoGroups.push({ ...healthCheck, name: tier, type: 'url-test', proxies: candidates, tolerance: 0 });
+        tiers.push(tier);
+      }
+      // Unknown labels remain available as manual picks.
+      if (!tiers.length) return { name: selector, type: 'select', proxies: ['REJECT', ...nodes] };
+      autoGroups.push({ ...healthCheck, name: automatic, type: 'fallback', proxies: tiers });
+    } else {
+      autoGroups.push({ ...healthCheck, name: automatic, type: 'url-test', proxies: nodes, tolerance: 50 });
+    }
+    return { name: selector, type: 'select', proxies: [automatic, ...nodes] };
   });
   const businessGroups = [
     ...routes.map(route => ({ name: route.name, type: 'select', proxies: [...choices] })),
-    ...groups.filter(group => !managedRegionNames.includes(group.name))
+    ...groups.filter(group => !managedRegionNames.has(group.name))
   ];
   config['proxy-groups'] = [
     ...businessGroups.map(group => {
@@ -65,12 +110,20 @@ const main = (config) => {
         group = { ...group, hidden: true };
       }
       // Keep fixed DIRECT/REJECT wrappers and automatic test groups unchanged.
-      const previous = (group.proxies || []).filter(name => !managedRegionNames.includes(name));
+      const previous = (group.proxies || []).filter(name => !managedRegionNames.has(name));
       const fixed = previous.length === 1 && ['DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'].includes(previous[0]);
       if (group.type !== 'select' || fixed) return group;
-      // Put the default region first without preventing manual overrides.
-      const preferred = routes.find(route => route.name === group.name)?.preferred;
-      return { ...group, proxies: [...new Set([...(preferred ? [preferred] : []), ...previous, ...regionNames])] };
+      const preferred = routes.find(route => route.name === group.name)?.preferred ??
+        (/(?:^|\s)PAOLUZ$/i.test(group.name) ? usSelector : undefined);
+      const sortedNodes = previous.filter(name => nodeRanks.has(name))
+        .sort((a, b) => nodeRanks.get(a) - nodeRanks.get(b));
+      const rest = previous.filter(name => !nodeRanks.has(name));
+      return {
+        ...group,
+        // Display order is independent of the default used by a fresh selector.
+        'default-selected': preferred ?? group['default-selected'] ?? previous[0] ?? regionNames[0],
+        proxies: [...new Set([...displayRegionNames, ...sortedNodes, ...rest])]
+      };
     }),
     ...regionGroups,
     ...autoGroups
