@@ -4,8 +4,13 @@ const main = (config) => {
   // id 是规则集标识，尽量保持不变；file 是仓库 rules 目录下的文件路径。
   const usRegion = '🇺🇸 美国';
   const usSelector = usRegion + '节点';
+  const originalGroups = config['proxy-groups'] || [];
+  const paoluz = originalGroups.find(group => /(?:^|\s)PAOLUZ$/i.test(group.name))?.name;
+  const originalYouTube = originalGroups.find(group => group.name === 'YouTube');
+  const youtubeRules = 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/YouTube/YouTube.list';
   const routes = [
     { name: 'X / Grok / Cursor', id: 'my-routing', file: 'X&Grok&Cursor.list', preferred: usSelector },
+    { name: 'YouTube', id: 'my-routing-youtube', url: youtubeRules, preferred: originalYouTube ? undefined : paoluz, existing: originalYouTube },
     { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list', preferred: usSelector },
     { name: 'Telegram SG', id: 'telegram-sg', file: 'TelegramSG.list', preferred: '🇸🇬 新加坡节点' },
     { name: 'Telegram US', id: 'telegram-us', file: 'TelegramUS.list', preferred: usSelector },
@@ -15,7 +20,7 @@ const main = (config) => {
   const names = routes.map(route => route.name);
 
   // 保留机场原有策略组，只替换本脚本管理的同名组，避免重复添加。
-  const groups = (config['proxy-groups'] || []).filter(group => !names.includes(group.name));
+  const groups = originalGroups.filter(group => !names.includes(group.name));
 
   // Custom service selectors can pick a region, a node, or DIRECT.
   const choices = [...new Set([
@@ -100,7 +105,12 @@ const main = (config) => {
     return { name: selector, type: 'select', proxies: [automatic, ...nodes] };
   });
   const businessGroups = [
-    ...routes.map(route => ({ name: route.name, type: 'select', proxies: [...choices] })),
+    ...routes.map(route => route.existing ?? {
+      name: route.name, type: 'select',
+      proxies: route.preferred && !managedRegionNames.has(route.preferred)
+        ? [route.preferred, ...choices]
+        : [...choices]
+    }),
     ...groups.filter(group => !managedRegionNames.has(group.name))
   ];
   config['proxy-groups'] = [
@@ -114,7 +124,7 @@ const main = (config) => {
       const fixed = previous.length === 1 && ['DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'].includes(previous[0]);
       if (group.type !== 'select' || fixed) return group;
       const preferred = routes.find(route => route.name === group.name)?.preferred ??
-        (/(?:^|\s)PAOLUZ$/i.test(group.name) ? usSelector : undefined);
+        (group.name === paoluz ? usSelector : undefined);
       const sortedNodes = previous.filter(name => nodeRanks.has(name))
         .sort((a, b) => nodeRanks.get(a) - nodeRanks.get(b));
       const rest = previous.filter(name => !nodeRanks.has(name));
@@ -134,7 +144,7 @@ const main = (config) => {
   for (const route of routes) {
     providers[route.id] = {
       type: 'http', behavior: 'classical', format: 'text',
-      url: base + route.file,
+      url: route.url ?? base + route.file,
       path: './ruleset/' + route.id + '.list',
       interval: 86400
     };

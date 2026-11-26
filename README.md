@@ -6,7 +6,7 @@
 
 在订阅扩展中通过 URL 导入[脚本](https://raw.githubusercontent.com/chiqingsong/my-routing/main/flclash/My-Routing.js)，选择脚本模式，绑定并应用。
 
-- `X / Grok / Cursor`、`Siri` 可以选择节点或地区组；对应规则优先于机场规则。
+- `X / Grok / Cursor`、`YouTube`、`Siri` 可以选择节点或地区组；对应规则优先于机场规则。
 - 提供香港、台湾、日本、韩国、新加坡、美国、马来西亚、德国、荷兰、英国十个地区组，按节点名称识别地区。每组可手选节点，或选择组内自动测速；没有匹配节点的地区使用 `REJECT`。
 - 业务组先展示地区组，再按同样的地区顺序展示已有节点：美国、日本、新加坡、台湾、香港、韩国、马来西亚、德国、荷兰、英国。X / Grok / Cursor、Siri、PAOLUZ 默认选美国节点组。已有的手动选择优先。
 - 美国自动组按顺序回退：D3 → D1/D2/D4 测速选优 → 带末尾数字倍率的美国节点测速选优。缺少节点的层级会跳过，其他美国节点仍可手选。
@@ -22,6 +22,7 @@
 | 文件 | 上游 | 更新方式 |
 | --- | --- | --- |
 | [X&Grok&Cursor.list](rules/X&Grok&Cursor.list) | [blackmatrix7 Twitter](https://github.com/blackmatrix7/ios_rule_script/blob/master/rule/Loon/Twitter/Twitter.list)、v2fly [Cursor](https://github.com/v2fly/domain-list-community/blob/master/data/cursor) / [xAI](https://github.com/v2fly/domain-list-community/blob/master/data/xai) | 手动维护快照 |
+| YouTube | [blackmatrix7 Clash 兼容清单](https://github.com/blackmatrix7/ios_rule_script/blob/master/rule/Clash/YouTube/YouTube.list) | 直接引用上游，保留域名和 IP 规则；新建组默认跟随 PAOLUZ（如有） |
 | [Siri.list](rules/Siri.list) | [ddgksf2013](https://github.com/ddgksf2013/Filter/blob/master/AppleIntelligence.list)、[RocM301](https://github.com/RocM301/Apple-Rule/blob/main/Apple-AI.list) | 合并去重后手动维护 |
 | [TelegramSG.list](rules/TelegramSG.list)、[TelegramUS.list](rules/TelegramUS.list)、[TelegramEU.list](rules/TelegramEU.list) | [RzMY 区域映射与生成器](https://github.com/RzMY/Telegram-CIDR-Regions)、[RIPEstat 数据接口](https://stat.ripe.net/docs/data-api/api-endpoints/announced-prefixes) | 每日自动生成 |
 
