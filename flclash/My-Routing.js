@@ -14,7 +14,8 @@ const main = (config) => {
     { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list', preferred: usSelector },
     { name: 'Telegram SG', id: 'telegram-sg', file: 'TelegramSG.list', preferred: '🇸🇬 新加坡节点' },
     { name: 'Telegram US', id: 'telegram-us', file: 'TelegramUS.list', preferred: usSelector },
-    { name: 'Telegram EU', id: 'telegram-eu', file: 'TelegramEU.list', preferred: '🇩🇪 德国节点' }
+    { name: 'Telegram EU', id: 'telegram-eu', file: 'TelegramEU.list', preferred: '🇩🇪 德国节点' },
+    { name: 'Non-US Brokers', id: 'non-us-brokers', file: 'Non-US-Brokers.list', preferred: 'DIRECT' }
   ];
   const base = 'https://raw.githubusercontent.com/chiqingsong/my-routing/main/rules/';
   const names = routes.map(route => route.name);
@@ -107,7 +108,7 @@ const main = (config) => {
   const businessGroups = [
     ...routes.map(route => route.existing ?? {
       name: route.name, type: 'select',
-      proxies: route.preferred && !managedRegionNames.has(route.preferred)
+      proxies: route.preferred && !managedRegionNames.has(route.preferred) && !choices.includes(route.preferred)
         ? [route.preferred, ...choices]
         : [...choices]
     }),

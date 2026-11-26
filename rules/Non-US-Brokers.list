@@ -1,0 +1,9 @@
+# Non-US Brokers
+# Longbridge and LongPort domains. The policy is assigned by the client.
+DOMAIN-KEYWORD,longbridge
+DOMAIN-SUFFIX,lbkrs.com
+DOMAIN-SUFFIX,lbctrl.com
+DOMAIN-SUFFIX,pbkrs.com
+DOMAIN-SUFFIX,wbrks.com
+DOMAIN-SUFFIX,longportapp.com
+DOMAIN-SUFFIX,longportapp.cn

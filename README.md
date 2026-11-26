@@ -25,6 +25,7 @@
 | YouTube | [blackmatrix7 Clash 兼容清单](https://github.com/blackmatrix7/ios_rule_script/blob/master/rule/Clash/YouTube/YouTube.list) | 直接引用上游，保留域名和 IP 规则；新建组默认跟随 PAOLUZ（如有） |
 | [Siri.list](rules/Siri.list) | [ddgksf2013](https://github.com/ddgksf2013/Filter/blob/master/AppleIntelligence.list)、[RocM301](https://github.com/RocM301/Apple-Rule/blob/main/Apple-AI.list) | 合并去重后手动维护 |
 | [TelegramSG.list](rules/TelegramSG.list)、[TelegramUS.list](rules/TelegramUS.list)、[TelegramEU.list](rules/TelegramEU.list) | [RzMY 区域映射与生成器](https://github.com/RzMY/Telegram-CIDR-Regions)、[RIPEstat 数据接口](https://stat.ripe.net/docs/data-api/api-endpoints/announced-prefixes) | 每日自动生成 |
+| [Non-US-Brokers.list](rules/Non-US-Brokers.list) | 长桥与 LongPort 域名 | 手动维护，新建组默认直连 |
 
 Siri 清单也包含 Apple Relay 等服务，覆盖范围不限于 Siri。Telegram SG、US、EU 已接入脚本，默认分别选择新加坡、美国、德国地区组，可手动更换出口；三份规则均优先于机场规则。
 
