@@ -1,7 +1,6 @@
 // FlClash 会把原始订阅配置传入 main，脚本修改后再返回。
 const main = (config) => {
-  // 每一项把一个远程规则列表绑定到一个可手动选择节点的策略组。
-  // id 是规则集标识，尽量保持不变；file 是仓库 rules 目录下的文件路径。
+  // Keep rule-provider IDs stable. A route can use a remote rule set or an inline payload.
   const usRegion = '🇺🇸 美国';
   const usSelector = usRegion + '节点';
   const originalGroups = config['proxy-groups'] || [];
@@ -9,22 +8,34 @@ const main = (config) => {
   const originalYouTube = originalGroups.find(group => group.name === 'YouTube');
   const youtubeRules = 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/YouTube/YouTube.list';
   const googleGroup = 'Google';
-  const metaGroup = 'Meta';
-  const metaRules = 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/classical/meta.yaml';
-  const metaAdditionalRules = [
-    'instagr.am',
-    'whatsapp.biz',
-    'ecto1usercontent.com',
-    'meta-agents-apps.workers.dev'
-  ].map(domain => 'DOMAIN-SUFFIX,' + domain + ',' + metaGroup);
+  const metaCubeXRules = 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/classical/';
   const routes = [
     { name: 'X / Grok / Cursor', id: 'my-routing', file: 'X&Grok&Cursor.list', preferred: usSelector },
     { name: 'YouTube', id: 'my-routing-youtube', url: youtubeRules, preferred: originalYouTube ? undefined : paoluz, existing: originalYouTube },
     { name: googleGroup, preferred: usSelector },
     { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list', preferred: usSelector },
     {
-      name: metaGroup, id: 'my-routing-meta', url: metaRules, format: 'yaml',
-      preferred: usSelector, additionalRules: metaAdditionalRules
+      name: 'Instagram', id: 'my-routing-instagram', url: metaCubeXRules + 'instagram.yaml',
+      format: 'yaml', preferred: usSelector, additionalRules: ['DOMAIN-SUFFIX,instagr.am,Instagram']
+    },
+    {
+      name: 'Muse', id: 'my-routing-muse', preferred: usSelector,
+      payload: [
+        'DOMAIN-SUFFIX,muse.ai',
+        'DOMAIN-SUFFIX,meta.ai',
+        'DOMAIN-SUFFIX,metaaivm.com',
+        'DOMAIN-SUFFIX,metaaiusercontent.com',
+        'DOMAIN-SUFFIX,ecto1usercontent.com',
+        'DOMAIN-SUFFIX,meta-agents-apps.workers.dev'
+      ]
+    },
+    {
+      name: 'Threads', id: 'my-routing-threads', preferred: usSelector,
+      payload: ['DOMAIN-SUFFIX,threads.com', 'DOMAIN-SUFFIX,threads.net']
+    },
+    {
+      name: 'WhatsApp', id: 'my-routing-whatsapp', url: metaCubeXRules + 'whatsapp.yaml',
+      format: 'yaml', preferred: usSelector, additionalRules: ['DOMAIN-SUFFIX,whatsapp.biz,WhatsApp']
     },
     { name: 'Telegram SG', id: 'telegram-sg', file: 'TelegramSG.list', preferred: '🇸🇬 新加坡节点' },
     { name: 'Telegram US', id: 'telegram-us', file: 'TelegramUS.list', preferred: usSelector },
@@ -154,10 +165,14 @@ const main = (config) => {
     ...autoGroups
   ];
 
-  // 保留其他规则集，并设置我们自己的远程列表，每 86400 秒（24 小时）更新一次。
+  // Keep existing providers and refresh managed remote lists every 24 hours.
   const providers = { ...(config['rule-providers'] || {}) };
   for (const route of routes) {
     if (!route.id) continue;
+    if (route.payload) {
+      providers[route.id] = { type: 'inline', behavior: 'classical', payload: route.payload };
+      continue;
+    }
     const format = route.format ?? 'text';
     providers[route.id] = {
       type: 'http', behavior: 'classical', format,
