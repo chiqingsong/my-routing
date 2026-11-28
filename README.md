@@ -7,6 +7,7 @@
 在订阅扩展中通过 URL 导入[脚本](https://raw.githubusercontent.com/chiqingsong/my-routing/main/flclash/My-Routing.js)，选择脚本模式，绑定并应用。
 
 - `X / Grok / Cursor`、`YouTube`、`Siri` 可以选择节点或地区组；对应规则优先于机场规则。
+- Google 组紧跟 YouTube，默认选美国节点。Google 通用规则使用内核的 Google GeoSite 分类；原订阅里的海外 AI、谷歌 FCM 和明确直连的域名仍按原订阅匹配。
 - 提供香港、台湾、日本、韩国、新加坡、美国、马来西亚、德国、荷兰、英国十个地区组，按节点名称识别地区。每组可手选节点，或选择组内自动测速；没有匹配节点的地区使用 `REJECT`。
 - 业务组先展示地区组，再按同样的地区顺序展示已有节点：美国、日本、新加坡、台湾、香港、韩国、马来西亚、德国、荷兰、英国。X / Grok / Cursor、Siri、PAOLUZ 默认选美国节点组。已有的手动选择优先。
 - 美国自动组按顺序回退：D3 → D1/D2/D4 测速选优 → 带末尾数字倍率的美国节点测速选优。缺少节点的层级会跳过，其他美国节点仍可手选。

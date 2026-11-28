@@ -8,9 +8,11 @@ const main = (config) => {
   const paoluz = originalGroups.find(group => /(?:^|\s)PAOLUZ$/i.test(group.name))?.name;
   const originalYouTube = originalGroups.find(group => group.name === 'YouTube');
   const youtubeRules = 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/YouTube/YouTube.list';
+  const googleGroup = 'Google';
   const routes = [
     { name: 'X / Grok / Cursor', id: 'my-routing', file: 'X&Grok&Cursor.list', preferred: usSelector },
     { name: 'YouTube', id: 'my-routing-youtube', url: youtubeRules, preferred: originalYouTube ? undefined : paoluz, existing: originalYouTube },
+    { name: googleGroup, preferred: usSelector },
     { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list', preferred: usSelector },
     { name: 'Telegram SG', id: 'telegram-sg', file: 'TelegramSG.list', preferred: '🇸🇬 新加坡节点' },
     { name: 'Telegram US', id: 'telegram-us', file: 'TelegramUS.list', preferred: usSelector },
@@ -143,6 +145,7 @@ const main = (config) => {
   // 保留其他规则集，并设置我们自己的远程列表，每 86400 秒（24 小时）更新一次。
   const providers = { ...(config['rule-providers'] || {}) };
   for (const route of routes) {
+    if (!route.id) continue;
     providers[route.id] = {
       type: 'http', behavior: 'classical', format: 'text',
       url: route.url ?? base + route.file,
@@ -150,17 +153,48 @@ const main = (config) => {
       interval: 86400
     };
   }
-  config['rule-providers'] = providers;
+  const googleExceptionsId = 'my-routing-google-exceptions';
+  const googleGeosite = 'GEOSITE,google';
+  const scopedGoogle = 'AND,((' + googleGeosite + '),(NOT,((RULE-SET,' + googleExceptionsId + '))))';
+  const protectedTargets = new Set(['DIRECT']);
+  for (const proxy of config.proxies || []) {
+    if (proxy.type === 'direct') protectedTargets.add(proxy.name);
+  }
+  for (const group of originalGroups) {
+    if (/海外\s*AI|(?:谷歌|google)\s*FCM/i.test(group.name) ||
+        (group.type === 'select' && group.proxies?.length === 1 && group.proxies[0] === 'DIRECT' &&
+          !group.use?.length && !group['include-all'] && !group['include-all-proxies'] && !group['include-all-providers'])) {
+      protectedTargets.add(group.name);
+    }
+  }
 
-  // 把我们的规则放在机场规则之前；流量命中第一条匹配规则后就使用对应策略组。
-  // Remove managed bindings before prepending them to keep repeated runs idempotent.
-  const ids = new Set(routes.map(route => route.id));
+  // Replace the airport's broad Google rule and remove previously injected rules on reapplication.
+  const ids = new Set(routes.map(route => route.id).filter(Boolean));
   const originalRules = (config.rules || []).filter(rule => {
-    const parts = rule.split(',').map(part => part.trim());
-    return !(parts[0] === 'RULE-SET' && ids.has(parts[1]));
+    if (rule === scopedGoogle + ',' + googleGroup) return false;
+    const [type, value] = rule.split(',').map(part => part.trim());
+    return !(type === 'RULE-SET' && ids.has(value)) &&
+      !(type === 'GEOSITE' && value?.toLowerCase() === 'google');
   });
+  // Let the airport's existing AI, FCM and direct domain rules handle their own destinations.
+  const exceptions = new Set();
+  const domainTypes = new Set(['DOMAIN', 'DOMAIN-SUFFIX', 'DOMAIN-KEYWORD', 'DOMAIN-WILDCARD', 'DOMAIN-REGEX']);
+  for (const rule of originalRules) {
+    const [type, value, target] = rule.split(',').map(part => part.trim());
+    if (domainTypes.has(type) && value && protectedTargets.has(target)) {
+      exceptions.add(type + ',' + value);
+    }
+  }
+  if (exceptions.size) {
+    providers[googleExceptionsId] = { type: 'inline', behavior: 'classical', payload: [...exceptions] };
+  } else {
+    delete providers[googleExceptionsId];
+  }
+  config['rule-providers'] = providers;
   config.rules = [
-    ...routes.map(route => 'RULE-SET,' + route.id + ',' + route.name),
+    ...routes.map(route => route.id
+      ? 'RULE-SET,' + route.id + ',' + route.name
+      : (exceptions.size ? scopedGoogle : googleGeosite) + ',' + route.name),
     ...originalRules
   ];
   // Reuse an automatic selector only when every candidate is a concrete proxy.
