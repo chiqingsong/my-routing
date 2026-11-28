@@ -9,11 +9,23 @@ const main = (config) => {
   const originalYouTube = originalGroups.find(group => group.name === 'YouTube');
   const youtubeRules = 'https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/YouTube/YouTube.list';
   const googleGroup = 'Google';
+  const metaGroup = 'Meta';
+  const metaRules = 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/classical/meta.yaml';
+  const metaAdditionalRules = [
+    'instagr.am',
+    'whatsapp.biz',
+    'ecto1usercontent.com',
+    'meta-agents-apps.workers.dev'
+  ].map(domain => 'DOMAIN-SUFFIX,' + domain + ',' + metaGroup);
   const routes = [
     { name: 'X / Grok / Cursor', id: 'my-routing', file: 'X&Grok&Cursor.list', preferred: usSelector },
     { name: 'YouTube', id: 'my-routing-youtube', url: youtubeRules, preferred: originalYouTube ? undefined : paoluz, existing: originalYouTube },
     { name: googleGroup, preferred: usSelector },
     { name: 'Siri', id: 'my-routing-siri', file: 'Siri.list', preferred: usSelector },
+    {
+      name: metaGroup, id: 'my-routing-meta', url: metaRules, format: 'yaml',
+      preferred: usSelector, additionalRules: metaAdditionalRules
+    },
     { name: 'Telegram SG', id: 'telegram-sg', file: 'TelegramSG.list', preferred: '🇸🇬 新加坡节点' },
     { name: 'Telegram US', id: 'telegram-us', file: 'TelegramUS.list', preferred: usSelector },
     { name: 'Telegram EU', id: 'telegram-eu', file: 'TelegramEU.list', preferred: '🇩🇪 德国节点' },
@@ -146,10 +158,11 @@ const main = (config) => {
   const providers = { ...(config['rule-providers'] || {}) };
   for (const route of routes) {
     if (!route.id) continue;
+    const format = route.format ?? 'text';
     providers[route.id] = {
-      type: 'http', behavior: 'classical', format: 'text',
+      type: 'http', behavior: 'classical', format,
       url: route.url ?? base + route.file,
-      path: './ruleset/' + route.id + '.list',
+      path: './ruleset/' + route.id + (format === 'yaml' ? '.yaml' : '.list'),
       interval: 86400
     };
   }
@@ -170,8 +183,9 @@ const main = (config) => {
 
   // Replace the airport's broad Google rule and remove previously injected rules on reapplication.
   const ids = new Set(routes.map(route => route.id).filter(Boolean));
+  const additionalRules = new Set(routes.flatMap(route => route.additionalRules ?? []));
   const originalRules = (config.rules || []).filter(rule => {
-    if (rule === scopedGoogle + ',' + googleGroup) return false;
+    if (additionalRules.has(rule) || rule === scopedGoogle + ',' + googleGroup) return false;
     const [type, value] = rule.split(',').map(part => part.trim());
     return !(type === 'RULE-SET' && ids.has(value)) &&
       !(type === 'GEOSITE' && value?.toLowerCase() === 'google');
@@ -192,9 +206,12 @@ const main = (config) => {
   }
   config['rule-providers'] = providers;
   config.rules = [
-    ...routes.map(route => route.id
-      ? 'RULE-SET,' + route.id + ',' + route.name
-      : (exceptions.size ? scopedGoogle : googleGeosite) + ',' + route.name),
+    ...routes.flatMap(route => [
+      ...(route.additionalRules ?? []),
+      route.id
+        ? 'RULE-SET,' + route.id + ',' + route.name
+        : (exceptions.size ? scopedGoogle : googleGeosite) + ',' + route.name
+    ]),
     ...originalRules
   ];
   // Reuse an automatic selector only when every candidate is a concrete proxy.
