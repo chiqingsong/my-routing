@@ -22,9 +22,9 @@
 
 | 文件 | 上游 | 更新方式 |
 | --- | --- | --- |
-| [X&Grok&Cursor.list](rules/X&Grok&Cursor.list) | [blackmatrix7 Twitter](https://github.com/blackmatrix7/ios_rule_script/blob/master/rule/Loon/Twitter/Twitter.list)、v2fly [Cursor](https://github.com/v2fly/domain-list-community/blob/master/data/cursor) / [xAI](https://github.com/v2fly/domain-list-community/blob/master/data/xai) | 手动维护快照 |
+| [X&Grok&Cursor.list](rules/X&Grok&Cursor.list) | [blackmatrix7 Twitter](https://github.com/blackmatrix7/ios_rule_script/blob/master/rule/Loon/Twitter/Twitter.list)、v2fly [Cursor](https://github.com/v2fly/domain-list-community/blob/master/data/cursor) / [xAI](https://github.com/v2fly/domain-list-community/blob/master/data/xai) | 每周检查，有变化时开 PR |
 | YouTube | [blackmatrix7 Clash 兼容清单](https://github.com/blackmatrix7/ios_rule_script/blob/master/rule/Clash/YouTube/YouTube.list) | 直接引用上游，保留域名和 IP 规则；新建组默认跟随 PAOLUZ（如有） |
-| [Siri.list](rules/Siri.list) | [ddgksf2013](https://github.com/ddgksf2013/Filter/blob/master/AppleIntelligence.list)、[RocM301](https://github.com/RocM301/Apple-Rule/blob/main/Apple-AI.list) | 合并去重后手动维护 |
+| [Siri.list](rules/Siri.list) | [ddgksf2013](https://github.com/ddgksf2013/Filter/blob/master/AppleIntelligence.list)、[RocM301](https://github.com/RocM301/Apple-Rule/blob/main/Apple-AI.list) | 每周检查，有变化时开 PR |
 | [TelegramSG.list](rules/TelegramSG.list)、[TelegramUS.list](rules/TelegramUS.list)、[TelegramEU.list](rules/TelegramEU.list) | [RzMY 区域映射与生成器](https://github.com/RzMY/Telegram-CIDR-Regions)、[RIPEstat 数据接口](https://stat.ripe.net/docs/data-api/api-endpoints/announced-prefixes) | 每日自动生成 |
 | [Non-US-Brokers.list](rules/Non-US-Brokers.list) | 长桥与 LongPort 域名 | 手动维护，新建组默认直连 |
 
@@ -32,7 +32,9 @@ Siri 清单也包含 Apple Relay 等服务，覆盖范围不限于 Siri。Telegr
 
 ## 维护
 
-新增匹配项时修改对应列表；新增独立分流组时，同时修改脚本的 `routes`。
+新增独立分流组时，同时修改脚本的 `routes`。
+
+X / Grok / Cursor 和 Siri 的[上游检查](.github/workflows/update-upstream-rules.yml)每周一北京时间 09:37 运行，也可手动触发。规则有增删时更新同一个 PR，合并后设备从原地址拉取。手动添加这两份名单的规则时，在规则行旁加一行 `# Keep: <完整规则>`，防止后续同步删掉。运行 `python3 scripts/update_rules.py` 可预览差异。
 
 Telegram 使用改造后的[生成器](scripts/update_telegram.py)，按上游映射划分 SG（DC5）、US（DC1/DC3）、EU（DC2/DC4）。它只保留最新快照中仍宣告的网段，拆分跨区域重叠；获取或校验失败时不发布更新。[自动任务](.github/workflows/update-telegram.yml)计划每天北京时间 09:23 运行，可能受 GitHub 调度延迟影响，仅在规则变化时提交，也可在 Actions 手动触发。
 

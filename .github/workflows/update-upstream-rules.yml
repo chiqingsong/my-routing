@@ -1,0 +1,51 @@
+name: Check upstream routing rules
+
+on:
+  schedule:
+    - cron: '37 1 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/update_rules.py'
+      - 'tests/test_update_rules.py'
+      - '.github/workflows/update-upstream-rules.yml'
+
+concurrency:
+  group: upstream-rule-update
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test rule updates
+        run: python -m unittest discover -s tests -v
+      - name: Stage validated upstream changes
+        run: |
+          report="$RUNNER_TEMP/routing-update.md"
+          python scripts/update_rules.py --write --report "$report"
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+      - name: Create or update the review pull request
+        uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8.1.3
+        with:
+          base: main
+          branch: automation/upstream-rule-updates
+          delete-branch: true
+          add-paths: |
+            rules/X&Grok&Cursor.list
+            rules/Siri.list
+          title: Update upstream routing rules
+          commit-message: Update upstream routing rules
+          body-path: ${{ runner.temp }}/routing-update.md
